@@ -1,0 +1,15 @@
+---
+import { url } from '../../lib/site.js';
+---
+<p>
+  <a href={url('/molecules/')}>Molecules</a> groups the data into diatomics, triatomics and polyatomics. Pick a molecule
+  to see its isotopologues. Each isotopologue has its runs, newest first, with the latest run of each MARVEL version
+  marked, the run's paper, its level and transition counts, plots of its levels and spectral coverage, and links to its
+  energy-levels, transitions and segment files.
+</p>
+<p><a href={url('/references/')}>References</a> lists the paper behind every run.</p>
+<p>
+  <a href={url('/api/')}>API</a> explains how to query the data directly: filtering levels by quantum numbers, paging
+  through transitions, and downloading files from scripts.
+</p>
+<p><a href={url('/submit/')}>Submitting data</a> covers how to send a MARVEL dataset for inclusion.</p>

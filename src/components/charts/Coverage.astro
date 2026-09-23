@@ -1,0 +1,51 @@
+---
+// Spectral coverage of a run's input transitions on a log wavenumber axis
+// (0.01 to 100,000 cm-1). mode="strip": one heat row (opacity = sqrt share),
+// for stacking runs; mode="axis": the shared scale to put under them.
+import { COVERAGE, REGIONS } from '../../lib/figures.js';
+
+const { coverage, mode = 'strip', label = 'Spectral coverage', regions = true } = Astro.props;
+const { lo, hi, bins } = COVERAGE;
+const W = 700;
+const H = 14;
+const bw = W / bins;
+const step = (hi - lo) / bins;
+const fmtNu = (e) => (e >= 3 ? `${(10 ** e / 1000).toLocaleString('en', { maximumFractionDigits: 1 })}k` : (10 ** e).toLocaleString('en', { maximumSignificantDigits: 2 }));
+const binLabel = (i) => `${fmtNu(lo + i * step)}–${fmtNu(lo + (i + 1) * step)} cm⁻¹`;
+const decades = Array.from({ length: hi - lo + 1 }, (_, k) => lo + k);
+const pct = (e) => `${(((e - lo) / (hi - lo)) * 100).toFixed(2)}%`;
+const kept = coverage?.kept ?? [];
+const removed = coverage?.removed ?? [];
+const max = Math.max(1, ...kept.map((k, i) => k + removed[i]));
+const total = kept.reduce((a, b) => a + b, 0);
+const summary = `${label}: ${total.toLocaleString('en')} lines; densest near ${binLabel(kept.indexOf(Math.max(...kept, 0)))}.`;
+---
+{mode === 'axis' ? (
+  <div class="cov axis" aria-hidden="true">
+    <div class="scale">{decades.map((e) => <span style={`left:${pct(e)}`} class={e === lo ? 'first' : e === hi ? 'last' : ''}>{fmtNu(e)}</span>)}</div>
+    {regions && <div class="regions">{REGIONS.map(([name, a, b]) => <span style={`left:${pct(a)};width:calc(${pct(b)} - ${pct(a)})`}>{name}</span>)}</div>}
+  </div>
+) : (
+  <svg class="cov strip" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} preserveAspectRatio="none">
+    <rect width={W} height={H} class="track" />
+    {kept.map((k, i) => (k + removed[i]) > 0 && (
+      <rect x={i * bw} width={bw - 1} height={H} class="heat" fill-opacity={(0.15 + 0.85 * Math.sqrt((k + removed[i]) / max)).toFixed(2)}>
+        <title>{binLabel(i)}: {k.toLocaleString('en')} lines{removed[i] ? `, ${removed[i]} removed` : ''}</title>
+      </rect>
+    ))}
+  </svg>
+)}
+
+<style>
+  /* Axis labels are HTML, not SVG text, so they stay legible at any width. */
+  .cov { display: block; width: 100%; }
+  .strip { height: var(--strip-h, 14px); }
+  .track { fill: var(--surface-2); }
+  .heat { fill: var(--seq); }
+  .scale, .regions { position: relative; height: 1.1rem; font-size: 11px; line-height: 1.1rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .scale { border-top: 1px solid var(--muted); }
+  .scale span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .scale span.first { transform: none; }
+  .scale span.last { transform: translateX(-100%); }
+  .regions span { position: absolute; top: 0; text-align: center; color: var(--fg); opacity: 0.7; border-top: 2px solid var(--line); overflow: hidden; white-space: nowrap; }
+</style>

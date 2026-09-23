@@ -1,30 +1,72 @@
 ---
-import Base from '../../layouts/Base.astro';
-import { get, GROUPS, groupOf, formulaSlug, url } from '../../lib/site.js';
+import Layout from '../../layouts/Layout.astro';
+import Coverage from '../../components/charts/Coverage.astro';
+import { loadSite, runFigure } from '../../lib/data.js';
+import { url } from '../../lib/site.js';
 
-const mols = await get('/molecules');
-const byFormula = Map.groupBy(mols, (m) => m.formula);
-const groups = GROUPS.map((g) => [g, [...byFormula].filter(([f]) => groupOf(f) === g)]).filter(([, fs]) => fs.length);
+const { groups } = await loadSite();
+
+// Card sparkline: the isotopologues' latest-run coverage, summed.
+const coverageOf = async (f) => {
+  const figs = await Promise.all(f.isos.map((m) => m.runs.find((r) => r.n_transitions)).filter(Boolean).map((r) => runFigure(r.id)));
+  if (!figs.length) return null;
+  const add = (key) => figs[0].coverage[key].map((_, i) => figs.reduce((n, g) => n + g.coverage[key][i], 0));
+  return { kept: add('kept'), removed: add('removed') };
+};
+const cards = await Promise.all(groups.map(async (g) => ({
+  ...g,
+  formulas: await Promise.all(g.formulas.map(async (f) => ({ ...f, coverage: await coverageOf(f) }))),
+})));
 ---
-<Base title="Molecules">
-  <h1>Molecules</h1>
-  {groups.map(([group, formulas]) => (
-    <section>
-      <h2>{group}</h2>
-      <ul class="formulas">
-        {formulas.map(([formula, isos]) => (
-          <li>
-            <a href={url(`/molecules/${formulaSlug(formula)}/`)}>{formula}</a>
-            <span class="muted">{isos.map((m) => m.isotopologue).join(', ')}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  ))}
-</Base>
+<Layout title="Molecules" wide>
+  <section class="band head">
+    <div class="inner">
+      <p class="eyebrow">Browse</p>
+      <h1>Molecules</h1>
+      <p class="sub">Each card shows a molecule's isotopologues, its latest-run totals and where its measured lines fall in the spectrum.</p>
+    </div>
+  </section>
+  <div class="inner">
+    {cards.map((g) => (
+      <section aria-labelledby={`g-${g.name}`}>
+        <h2 id={`g-${g.name}`}>{g.name} <span class="count num">{g.formulas.length}</span></h2>
+        <ul class="grid">
+          {g.formulas.map((f) => (
+            <li>
+              <a class="card" href={url(`/molecules/${f.slug}/`)}>
+                <span class="formula">{f.formula}</span>
+                <span class="isos">{f.isos.map((m) => <span class="chip">{m.isotopologue}</span>)}</span>
+                <span class="totals">
+                  <span><strong class="num">{f.nLevels.toLocaleString('en')}</strong> levels</span>
+                  <span><strong class="num">{f.nTransitions.toLocaleString('en')}</strong> transitions</span>
+                </span>
+                {f.coverage
+                  ? <span class="spark"><Coverage coverage={f.coverage} mode="strip" label={`${f.formula} spectral coverage`} /><Coverage mode="axis" regions={false} /></span>
+                  : <span class="muted nospark">No transitions loaded</span>}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </div>
+</Layout>
 
 <style>
-  .formulas { list-style: none; padding: 0; margin: 0; }
-  .formulas li { display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.4rem 0; border-bottom: 1px solid var(--line); }
-  .formulas a { font-weight: 600; min-width: 5rem; }
+  .head { padding: 2.5rem 0 2rem; }
+  .head h1 { margin-bottom: 0.5rem; }
+  .sub { color: var(--muted); max-width: 40rem; margin: 0; }
+  h2 { display: flex; align-items: baseline; gap: 0.6rem; }
+  .count { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+  .grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: 1rem; }
+  .grid li { margin: 0; }
+  .card { display: flex; flex-direction: column; gap: 0.8rem; height: 100%; padding: 1.1rem 1.1rem 0.9rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+  .card:hover { border-color: var(--accent-2); transform: translateY(-2px); }
+  .formula { font-size: 2.4rem; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+  .isos { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .totals { display: flex; flex-wrap: wrap; gap: 0.2rem 1.2rem; font-size: 0.875rem; color: var(--muted); }
+  .totals strong { color: var(--fg); font-weight: 500; }
+  .spark { margin-top: auto; --strip-h: 12px; display: flex; flex-direction: column; gap: 3px; }
+  .nospark { margin-top: auto; font-size: 0.8125rem; }
+  @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }
 </style>

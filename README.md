@@ -38,6 +38,11 @@ and every internal link goes through `url()` in `src/lib/site.js`. Locally
 
 ## Layout
 
-- `src/lib/site.js`: API access, grouping, run ordering, citation formatting
-- `src/layouts/Base.astro`: header, footer, styles
-- `src/pages/`: `index`, `molecules/index`, `molecules/[formula]`, `references`
+- `src/lib/site.js`: API access, nav, grouping, run ordering, citation formatting
+- `src/lib/data.js`: the build-time view model (`loadSite`, `runFigure`), fetched once per build
+- `src/lib/figures.js`: reduces levels and transitions to small plot datasets (unit conversion, binning)
+- `src/components/charts/`: the small level map (J vs energy) and spectral-coverage strips
+- `src/components/content/`: page prose (intro, citing, submit, API guide)
+- `src/styles/palette.css`: UCL colour tokens, light and dark
+- `src/layouts/Layout.astro`: header, light/dark toggle, footer, global styles
+- `src/pages/`: `index`, `molecules/index`, `molecules/[formula]`, `references`, `api`, `submit`

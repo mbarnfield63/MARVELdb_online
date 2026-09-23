@@ -1,0 +1,29 @@
+/* UCL palette (UCL visual identity: Mid Purple #500778, Bright Blue #0097A9, Stone #D6D2C4, Yellow #F6BE00, Orange #EA7600, Bright Pink #AC145A, Mid Green #8F993E, Blue Celeste #A4DBE8).
+   Semantic colour tokens only; the layout and charts read these names. The chart
+   series (--s1..--s5) are validated (dataviz validate_palette.js, all-pairs
+   CVD, against --bg) for light and dark separately; --s-other is the neutral
+   "other" bucket. A page follows the system theme unless <html data-theme>
+   forces one. */
+:root {
+  --bg: #fcfcfb; --surface: #f4f2ee; --surface-2: #e6e2d8; --fg: #1a1a1a; --muted: #5d5850; --line: #dedad0;
+  --link: #500778; --accent: #500778; --accent-2: #0097A9; --band: #500778; --on-band: #ffffff; --band-muted: #d9c6e6;
+  --highlight: #fdf0c2; --seq: #0097A9; --focus: #F6BE00;
+  --s1: #0097A9; --s2: #a45300; --s3: #92114d; --s4: #8F993E; --s5: #8551a1; --s-other: #9a948a;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15111a; --surface: #1e1924; --surface-2: #2a2331; --fg: #ece8ef; --muted: #a8a0b1; --line: #342c3c;
+    --link: #A4DBE8; --accent: #b58ad6; --accent-2: #1aa1b2; --band: #2d0a45; --on-band: #ffffff; --band-muted: #c9b3d9;
+    --highlight: #3b3212; --seq: #1aa1b2; --focus: #F6BE00;
+    --s1: #1aa1b2; --s2: #bb5e00; --s3: #bb2b67; --s4: #4761ac; --s5: #a35cfc; --s-other: #6e6676;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+    --bg: #15111a; --surface: #1e1924; --surface-2: #2a2331; --fg: #ece8ef; --muted: #a8a0b1; --line: #342c3c;
+    --link: #A4DBE8; --accent: #b58ad6; --accent-2: #1aa1b2; --band: #2d0a45; --on-band: #ffffff; --band-muted: #c9b3d9;
+    --highlight: #3b3212; --seq: #1aa1b2; --focus: #F6BE00;
+    --s1: #1aa1b2; --s2: #bb5e00; --s3: #bb2b67; --s4: #4761ac; --s5: #a35cfc; --s-other: #6e6676;
+  color-scheme: dark;
+}

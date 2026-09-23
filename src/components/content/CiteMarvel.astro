@@ -1,0 +1,9 @@
+---
+import { url } from '../../lib/site.js';
+import { METHOD_PAPERS } from '../../lib/data.js';
+---
+<p>If you use MARVEL data, please cite the method papers:</p>
+<ol class="method-papers">
+  {METHOD_PAPERS.map((p) => <li>{p.text} <a href={`https://doi.org/${p.doi}`}>doi:{p.doi}</a></li>)}
+</ol>
+<p>Cite the paper for each dataset as well; see <a href={url('/references/')}>References</a>.</p>

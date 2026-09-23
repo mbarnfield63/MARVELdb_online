@@ -1,46 +1,64 @@
 ---
-import Base from '../layouts/Base.astro';
-import { get, formulaSlug, compactCite, url } from '../lib/site.js';
+import Layout from '../layouts/Layout.astro';
+import { loadSite } from '../lib/data.js';
+import { formulaSlug, latexToHtml, url } from '../lib/site.js';
 
-const [pubs, mols] = await Promise.all([get('/publications'), get('/molecules')]);
-const bySlug = Object.fromEntries(mols.map((m) => [m.slug, m]));
+const { references } = await loadSite();
 // The API already orders newest first, so groupBy keeps years descending.
-const byYear = [...Map.groupBy(pubs, (p) => p.year ?? 'Undated')];
+const byYear = [...Map.groupBy(references, (p) => p.year ?? 'Undated')];
 ---
-<Base title="References">
-  <h1>References</h1>
-  <p class="muted">The papers behind the MARVEL runs in this database, newest first. To cite the MARVEL method itself, see the <a href={url('/#cite')}>home page</a>.</p>
-  <div class="scroll">
-    <table>
-      {byYear.map(([year, rows]) => (
-        <tbody>
-          <tr class="year"><th colspan="4" scope="colgroup">{year}</th></tr>
-          <tr class="cols"><th scope="col">Molecule(s)</th><th scope="col">Isotopologue(s)</th><th scope="col">Citation</th><th scope="col">Link</th></tr>
-          {rows.map((p) => {
-            const isos = p.isotopologues.map((s) => bySlug[s]).filter(Boolean);
-            return (
-              <tr id={p.bibtex_key}>
-                <td>{[...new Set(isos.map((m) => m.formula))].map((f) => <span>{f}</span>)}</td>
-                <td>{isos.map((m) => <a href={url(`/molecules/${formulaSlug(m.formula)}/#${m.slug}`)}>{m.isotopologue}</a>)}</td>
-                <td set:html={compactCite(p)} />
-                <td>{p.doi ? <a href={`https://doi.org/${p.doi}`}>{p.doi}</a> : <span class="muted">—</span>}</td>
-              </tr>
-            );
-          })}
-        </tbody>
+<Layout title="References" wide>
+  <section class="band head">
+    <div class="inner">
+      <p class="eyebrow">{references.length} papers</p>
+      <h1>References</h1>
+      <p class="sub">The papers behind the MARVEL runs in this database, newest first. To cite the MARVEL method itself, see the <a href={url('/#cite')}>home page</a>.</p>
+    </div>
+  </section>
+  <div class="inner">
+    <ol class="timeline">
+      {byYear.map(([year, pubs]) => (
+        <li class="year">
+          <h2 class="num">{year}</h2>
+          <ul class="papers">
+            {pubs.map((p) => (
+              <li id={p.bibtex_key} class="paper">
+                <div class="formulas">{p.formulas.map((f) => <span class="chip">{f}</span>)}</div>
+                <p class="title" set:html={latexToHtml(p.title)} />
+                <p class="cite" set:html={p.compact} />
+                <p class="links">
+                  {p.doi ? <a href={`https://doi.org/${p.doi}`} class="doi num">doi:{p.doi}</a> : <span class="muted">No DOI</span>}
+                </p>
+                {p.isos.length > 0 && (
+                  <p class="isos">
+                    {p.isos.map((m) => <a href={url(`/molecules/${formulaSlug(m.formula)}/#${m.slug}`)}>{m.isotopologue}</a>)}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </li>
       ))}
-    </table>
+    </ol>
   </div>
-</Base>
+</Layout>
 
 <style>
-  .scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
-  th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid var(--line); }
-  th { font-weight: 600; color: var(--muted); font-size: 0.8125rem; }
-  td:nth-child(-n+2) { white-space: nowrap; }
-  td:nth-child(-n+2) > * { display: block; }
-  .year th { color: var(--fg); font-size: 1rem; padding-top: 1.25rem; }
-  td:last-child { word-break: break-all; }
-  tr:target { background: var(--panel); }
+  .head { padding: 2.5rem 0 2rem; }
+  .head h1 { margin-bottom: 0.5rem; }
+  .sub { color: var(--muted); max-width: 42rem; margin: 0; }
+  .sub a { color: var(--fg); }
+  .timeline { list-style: none; margin: 2.5rem 0 0; padding: 0 0 0 1.75rem; position: relative; max-width: 52rem; }
+  .timeline::before { content: ""; position: absolute; left: 0.45rem; top: 0.6rem; bottom: 0; width: 2px; background: var(--line); }
+  .year { position: relative; margin: 0 0 2rem; }
+  .year::before { content: ""; position: absolute; left: -1.75rem; top: 0.45rem; width: 0.95rem; height: 0.95rem; border-radius: 50%; background: var(--bg); border: 3px solid var(--accent-2); }
+  .year h2 { margin: 0 0 0.9rem; font-size: 1.6rem; font-weight: 500; }
+  .papers { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.9rem; }
+  .paper { margin: 0; padding: 1rem 1.15rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); scroll-margin-top: 5rem; }
+  .paper:target { background: var(--highlight); border-color: var(--focus); }
+  .formulas { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.55rem; }
+  .title { font-weight: 600; font-size: 1.05rem; line-height: 1.35; margin: 0 0 0.35rem; }
+  .cite { color: var(--muted); font-size: 0.9rem; margin: 0 0 0.5rem; }
+  .links { margin: 0 0 0.4rem; font-size: 0.875rem; overflow-wrap: anywhere; }
+  .isos { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; margin: 0; font-size: 0.875rem; }
 </style>

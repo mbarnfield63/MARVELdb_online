@@ -8,6 +8,11 @@ export const ISSUES_URL = 'https://github.com/mbarnfield63/MARVEL_db/issues';
 export const CONTACT_EMAIL = 'marco.barnfield.24@ucl.ac.uk';
 export const MARVEL_URL = 'https://furted.github.io/MARVEL/';
 
+// Site navigation, in order: [path, label]. Every variant's layout renders it.
+export const NAV = [['/', 'Home'], ['/molecules/', 'Molecules'], ['/references/', 'References'], ['/api/', 'API'], ['/submit/', 'Submit']];
+// aria-current test for a nav path against the current page path.
+export const isCurrent = (path, current) => (path === '/' ? current === url('/') || current === url('') : current.startsWith(url(path)));
+
 export async function get(path) {
   const res = await fetch(API + path);
   if (!res.ok) throw new Error(`GET ${path}: ${res.status}`);

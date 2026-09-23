@@ -1,0 +1,38 @@
+---
+// Small term-value plot: levels at (J, energy), one colour per series
+// (figures.js groupPoints), with a legend when there is more than one.
+const { fig, label = 'Energy levels' } = Astro.props;
+const pad = 6;
+const W = fig.w + 2 * pad;
+const H = fig.h + 2 * pad;
+const series = fig.cats.map((c, i) => ({
+  ...c,
+  color: c.other ? 'var(--s-other)' : `var(--s${i + 1})`,
+  // Zero-length round-capped segments draw as dots: a few bytes per point.
+  d: fig.points.filter((p) => p[2] === i).map(([x, y]) => `M${x + pad} ${pad + fig.h - y}h0`).join(''),
+}));
+const fmt = (v) => v.toLocaleString('en');
+const summary = `${label}: ${fmt(fig.cats.reduce((n, c) => n + c.n, 0))} levels up to J = ${fmt(fig.jMax)} and ${fmt(Math.round(fig.eMax))} cm⁻¹`
+  + (fig.catKey ? `, by ${fig.catKey}: ${fig.cats.map((c) => c.label).join(', ')}.` : '.');
+---
+<figure class="levelmap">
+  <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary}>
+    {series.map((s) => <path d={s.d} stroke={s.color} />)}
+  </svg>
+  {fig.cats.length > 1 && (
+    <figcaption class="legend">
+      <span class="legend-key">{fig.catKey}</span>
+      {series.map((s) => <span><i style={`background:${s.color}`}></i>{s.label} <span class="n">{fmt(s.n)}</span></span>)}
+    </figcaption>
+  )}
+</figure>
+
+<style>
+  .levelmap { margin: 0; }
+  svg { display: block; width: 100%; height: auto; }
+  path { stroke-width: 2.6; stroke-linecap: round; fill: none; }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.8125rem; color: var(--fg); margin-top: 0.4rem; align-items: center; }
+  .legend i { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.35rem; vertical-align: -0.05rem; }
+  .legend-key { color: var(--muted); }
+  .legend .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+</style>
