@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro';
+import { CONTACT_EMAIL, ISSUES_URL, url } from '../lib/site.js';
+---
+<Base title="Submitting data">
+  <h1>Submitting data</h1>
+  <p>
+    The database grows from published MARVEL analyses. If you have run MARVEL on a molecule that is not here yet, or
+    have a newer analysis of one that is, we would like to add it.
+  </p>
+
+  <h2>How to submit</h2>
+  <p>
+    Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or <a href={ISSUES_URL}>open a GitHub issue</a>. For
+    large files, a download link (institutional file share, Zenodo, or similar) is fine.
+  </p>
+
+  <h2>What to include</h2>
+  <ul>
+    <li><strong>Input transitions file</strong>: the MARVEL input, with quantum numbers, uncertainties and source tags for every line.</li>
+    <li><strong>Energy levels file</strong>: the MARVEL output levels with their uncertainties.</li>
+    <li><strong>Segment file</strong>, if you used one.</li>
+    <li><strong>The paper</strong>: a DOI, or a full reference if it is not yet published. A BibTeX entry helps.</li>
+    <li><strong>The MARVEL version</strong> the run used, if known.</li>
+    <li>A short note on anything unusual: a non-standard quantum-number scheme, lines removed by hand, or known issues.</li>
+  </ul>
+  <p>
+    Send the files exactly as used and produced. We store them unchanged, and they are what users download from the
+    <a href={url('/molecules/')}>Molecules</a> pages.
+  </p>
+
+  <h2>What happens next</h2>
+  <p>
+    We check that the files parse and that the levels and transitions are consistent, then load the run and link it to its
+    paper. It then appears on the Molecules and <a href={url('/references/')}>References</a> pages and in the
+    <a href={url('/api/')}>API</a>. If something does not load cleanly, we will get back to you before publishing it.
+  </p>
+  <p>
+    A new run never replaces an existing one. If the database already holds a run for the same isotopologue, both are
+    kept, and the newest is shown first.
+  </p>
+
+</Base>

@@ -2,7 +2,7 @@
 import { CONTACT_EMAIL, ISSUES_URL, url } from '../lib/site.js';
 const { title } = Astro.props;
 const path = Astro.url.pathname;
-const nav = [['/', 'Home'], ['/molecules/', 'Molecules'], ['/references/', 'References']].map(([p, l]) => [url(p), l]);
+const nav = [['/', 'Home'], ['/molecules/', 'Molecules'], ['/references/', 'References'], ['/api/', 'API'], ['/submit/', 'Submit']].map(([p, l]) => [url(p), l]);
 ---
 <!doctype html>
 <html lang="en">

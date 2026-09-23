@@ -1,0 +1,125 @@
+---
+import Base from '../layouts/Base.astro';
+import { API, get, moleculesWithRuns, url } from '../lib/site.js';
+
+// Real ids for the examples, so they work when pasted.
+const mols = await moleculesWithRuns();
+const example = mols.find((m) => m.runs.length) ?? { slug: '12c16o', runs: [{ id: 1 }] };
+const run = example.runs[0];
+const [level] = await get(`/runs/${run.id}/levels?limit=1`).catch(() => []);
+const qnKey = level?.qn_key ?? '0 0';
+const [qnName, qnValue] = Object.entries(level?.quantum_numbers ?? { J: '0' }).at(-1);
+
+// Endpoint list comes from the API's own OpenAPI schema, so it cannot drift.
+const spec = await get('/openapi.json');
+const endpoints = Object.entries(spec.paths).map(([path, ops]) => {
+  const op = ops.get;
+  const params = (op.parameters ?? []).filter((p) => p.in === 'query').map((p) => p.name);
+  return { path, summary: op.summary, description: op.description?.split('\n\n')[0].replace(/`/g, ''), params };
+});
+---
+<Base title="API">
+  <h1>Using the API</h1>
+  <p>
+    Everything on this site comes from a public, read-only HTTP API that returns JSON. No account or key is needed.
+    The site is for browsing and downloading whole files; the API is for everything else: filtering levels by quantum
+    numbers, paging through transitions, or pulling data straight into a script.
+  </p>
+  <p>Base URL: <code>{API}</code></p>
+
+  <h2>How the data is organised</h2>
+  <p>
+    A <strong>molecule</strong> is one isotopologue, identified by a slug such as <code>{example.slug}</code>. Each molecule
+    has one or more <strong>runs</strong>: a single MARVEL inversion of a published transition set, with its solved energy
+    levels and the input transitions. Runs are never merged: when two runs exist for the same isotopologue (for example,
+    different papers or MARVEL versions), both are listed and you pick one by its numeric id.
+  </p>
+  <p>The usual path is: list molecules, list a molecule's runs, then query that run's levels, transitions or files.</p>
+
+  <h2>Examples</h2>
+  <pre><code>{`# All molecules (isotopologues)
+curl ${API}/molecules
+
+# One isotopologue's runs, newest first, with ids, counts and file sizes
+curl ${API}/molecules/${example.slug}/runs
+
+# Energy levels of a run, ordered by energy (first 1000 by default)
+curl ${API}/runs/${run.id}/levels
+
+# One level, by its full quantum-number string
+curl "${API}/runs/${run.id}/levels?qn_key=${encodeURIComponent(qnKey)}"
+
+# All levels with one quantum number fixed
+curl "${API}/runs/${run.id}/levels?qn.${qnName}=${encodeURIComponent(qnValue)}"
+
+# Input transitions that were removed from the solve
+curl "${API}/runs/${run.id}/transitions?removed=true"
+
+# The raw published energy-levels file, saved under its original name
+curl -O -J ${API}/runs/${run.id}/files/output_levels`}</code></pre>
+
+  <h3>From Python</h3>
+  <pre><code>{`import requests
+
+API = "${API}"
+runs = requests.get(f"{API}/molecules/${example.slug}/runs").json()
+levels = requests.get(f"{API}/runs/{runs[0]['id']}/levels", params={"limit": 10000}).json()
+print(len(levels), levels[0]["energy"], levels[0]["quantum_numbers"])`}</code></pre>
+
+  <h2>Filtering and paging</h2>
+  <ul>
+    <li>
+      <strong>Quantum numbers.</strong> Each run lists its quantum-number names in <code>qn_names</code>
+      (<code>GET /runs/&#123;id&#125;</code>). Filter levels on any of them with <code>qn.&lt;name&gt;=&lt;value&gt;</code>;
+      combine several to narrow further. <code>qn_key</code> matches the full quantum-number string exactly. An unknown
+      name returns an error listing the valid ones.
+    </li>
+    <li>
+      <strong>Transitions</strong> can be filtered by <code>source_tag</code> (the paper the line was measured in),
+      <code>removed</code>, and <code>consistency_flag</code>. Endpoint levels are given as <code>upper</code> and
+      <code>lower</code> quantum-number strings; they are <code>null</code> when that state was never solved.
+    </li>
+    <li>
+      <strong>Paging.</strong> Levels and transitions return at most <code>limit</code> rows (default 1000, maximum 10000),
+      starting from <code>offset</code>. Keep increasing <code>offset</code> until a page comes back shorter than
+      <code>limit</code>.
+    </li>
+    <li>
+      <strong>Whole files.</strong> For bulk data, the raw files (<code>output_levels</code>,
+      <code>input_transitions</code>, <code>segment</code>) are faster than paging. They are the published files, byte
+      for byte.
+    </li>
+  </ul>
+
+  <h2>All endpoints</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Endpoint</th><th>Description</th><th>Query parameters</th></tr></thead>
+      <tbody>
+        {endpoints.map((e) => (
+          <tr>
+            <td><code>GET {e.path}</code></td>
+            <td>{e.description ?? e.summary}</td>
+            <td>{e.params.length ? e.params.map((p) => <code>{p}</code>) : <span class="muted">—</span>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    The <a href={`${API}/docs`}>interactive API documentation</a> has every parameter and response in full, and lets you
+    try requests in the browser. The machine-readable schema is at <a href={`${API}/openapi.json`}><code>/openapi.json</code></a>.
+  </p>
+  <p>If you use data from the API, please cite it as described on the <a href={url('/#cite')}>home page</a>.</p>
+</Base>
+
+<style>
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+  th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--muted); font-size: 0.8125rem; }
+  td:first-child { white-space: nowrap; }
+  td:last-child code { display: block; }
+  li { margin-bottom: 0.6rem; }
+  h3 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+</style>
