@@ -29,5 +29,6 @@ test('BibTeX LaTeX to HTML', () => {
   assert.equal(formatAuthors("Cs{\\'a}sz{\\'a}r, Attila G. and Syme, Anna-Maree"), 'A. G. Császár, A.-M. Syme');
   assert.equal(compactCite({ authors: 'Syme, Anna-Maree and McKemmish, L. K.', journal: 'MNRAS', year: 2020 }), 'A.-M. Syme, et al., MNRAS, 2020');
   assert.equal(compactCite({ authors: 'Watson, J. K. G.', journal: 'JMS', year: 2004 }), 'J. K. G. Watson, JMS, 2004');
+  assert.equal(compactCite({ authors: 'Watson, J.', journal: 'Journal of Molecular Spectroscopy', year: 2004 }), 'J. Watson, J. Mol. Spectrosc., 2004');
   assert.equal(shortCite({ authors: 'Syme, A. and McKemmish, L. K.', year: 2020 }), 'Syme &amp; McKemmish (2020)');
 });

@@ -86,10 +86,25 @@ export function formatAuthors(authors = '') {
   }).join(', ');
 }
 
-// "S. Mahmoud, et al., Astrophys. J. Suppl., 2025" (references table)
+// Standard abbreviations; journals not listed show their full name.
+const JOURNAL_ABBREV = {
+  'Journal of Computational Chemistry': 'J. Comput. Chem.',
+  'Journal of Molecular Spectroscopy': 'J. Mol. Spectrosc.',
+  'Journal of Quantitative Spectroscopy and Radiative Transfer': 'J. Quant. Spectrosc. Radiat. Transf.',
+  'Monthly Notices of the Royal Astronomical Society': 'Mon. Not. R. Astron. Soc.',
+  'The Astrophysical Journal Supplement Series': 'Astrophys. J. Suppl. Ser.',
+  'The Astrophysical Journal': 'Astrophys. J.',
+  'The Journal of Chemical Physics': 'J. Chem. Phys.',
+  'Physical Chemistry Chemical Physics': 'Phys. Chem. Chem. Phys.',
+  'Molecular Physics': 'Mol. Phys.',
+  'Scientific Data': 'Sci. Data',
+};
+
+// "S. Mahmoud, et al., Astrophys. J. Suppl. Ser., 2025" (references table)
 export function compactCite(pub) {
   const names = formatAuthors(pub.authors).split(', ');
-  return [names[0] + (names.length > 1 ? ', et al.' : ''), latexToHtml(pub.journal), pub.year].join(', ');
+  const journal = JOURNAL_ABBREV[pub.journal] ?? pub.journal;
+  return [names[0] + (names.length > 1 ? ', et al.' : ''), latexToHtml(journal), pub.year].join(', ');
 }
 
 // "Syme & McKemmish (2020)" / "Mahmoud et al. (2025)"
