@@ -1,0 +1,34 @@
+---
+import Base from '../layouts/Base.astro';
+import { get, formulaSlug, latexToHtml, formatAuthors, url } from '../lib/site.js';
+
+const [pubs, mols] = await Promise.all([get('/publications'), get('/molecules')]);
+const bySlug = Object.fromEntries(mols.map((m) => [m.slug, m]));
+---
+<Base title="References">
+  <h1>References</h1>
+  <p class="muted">The papers behind the MARVEL runs in this database, newest first. To cite the MARVEL method itself, see the <a href={url('/#cite')}>home page</a>.</p>
+  <ol class="refs">
+    {pubs.map((p) => (
+      <li id={p.bibtex_key}>
+        <span set:html={formatAuthors(p.authors)} /> ({p.year}).{' '}
+        <strong set:html={latexToHtml(p.title)} />.{' '}
+        <em set:html={latexToHtml(p.journal)} />.
+        {p.doi && <> <a href={`https://doi.org/${p.doi}`}>doi:{p.doi}</a></>}
+        <div class="isos">
+          {p.isotopologues.map((s) => bySlug[s] && (
+            <a href={url(`/molecules/${formulaSlug(bySlug[s].formula)}/#${s}`)}>{bySlug[s].isotopologue}</a>
+          ))}
+        </div>
+      </li>
+    ))}
+  </ol>
+</Base>
+
+<style>
+  .refs { list-style: none; padding: 0; }
+  .refs li { padding: 0.9rem 0; border-bottom: 1px solid var(--line); }
+  .refs li:target { background: var(--panel); }
+  .refs strong { font-weight: 600; }
+  .isos { display: flex; gap: 1rem; margin-top: 0.3rem; font-size: 0.875rem; }
+</style>

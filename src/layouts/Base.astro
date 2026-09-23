@@ -1,0 +1,58 @@
+---
+import { CONTACT_EMAIL, ISSUES_URL, url } from '../lib/site.js';
+const { title } = Astro.props;
+const path = Astro.url.pathname;
+const nav = [['/', 'Home'], ['/molecules/', 'Molecules'], ['/references/', 'References']].map(([p, l]) => [url(p), l]);
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title ? `${title} · MARVEL online` : 'MARVEL online'}</title>
+</head>
+<body>
+  <header>
+    <nav>
+      <span class="brand">MARVEL online</span>
+      {nav.map(([href, label]) => (
+        <a href={href} aria-current={(href === url('/') ? path === href : path.startsWith(href)) ? 'page' : undefined}>{label}</a>
+      ))}
+    </nav>
+  </header>
+  <main><slot /></main>
+  <footer>
+    <p>Department of Physics &amp; Astronomy, University College London (UCL).</p>
+    <p>Found a data error? <a href={ISSUES_URL}>Open a GitHub issue</a>. Anything else: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+  </footer>
+</body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #fdfdfc; --fg: #1d1f21; --muted: #62666b; --line: #e2e3e5; --accent: #1f5fa8; --panel: #f4f5f6;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #16181b; --fg: #e4e6e8; --muted: #9aa0a6; --line: #2d3136; --accent: #7fb0ea; --panel: #1e2125; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header, main, footer { max-width: 60rem; margin: 0 auto; padding: 0 16px; }
+  header { border-bottom: 1px solid var(--line); max-width: none; }
+  nav { max-width: 60rem; margin: 0 auto; display: flex; gap: 1.25rem; align-items: baseline; padding: 0.9rem 0; flex-wrap: wrap; }
+  .brand { font-weight: 650; margin-right: auto; }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a[aria-current="page"], nav a:hover { color: var(--fg); }
+  main { padding-top: 1.5rem; padding-bottom: 3rem; }
+  footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 0.875rem; padding-top: 1rem; padding-bottom: 2rem; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 1rem; }
+  h2 { font-size: 1.25rem; margin: 2rem 0 0.5rem; }
+  pre, code { font-family: ui-monospace, "Cascadia Code", Menlo, monospace; font-size: 0.875rem; }
+  pre { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.75rem 1rem; overflow-x: auto; }
+  .muted { color: var(--muted); }
+</style>

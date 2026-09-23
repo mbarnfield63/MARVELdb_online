@@ -1,0 +1,30 @@
+---
+import Base from '../../layouts/Base.astro';
+import { get, GROUPS, groupOf, formulaSlug, url } from '../../lib/site.js';
+
+const mols = await get('/molecules');
+const byFormula = Map.groupBy(mols, (m) => m.formula);
+const groups = GROUPS.map((g) => [g, [...byFormula].filter(([f]) => groupOf(f) === g)]).filter(([, fs]) => fs.length);
+---
+<Base title="Molecules">
+  <h1>Molecules</h1>
+  {groups.map(([group, formulas]) => (
+    <section>
+      <h2>{group}</h2>
+      <ul class="formulas">
+        {formulas.map(([formula, isos]) => (
+          <li>
+            <a href={url(`/molecules/${formulaSlug(formula)}/`)}>{formula}</a>
+            <span class="muted">{isos.map((m) => m.isotopologue).join(', ')}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</Base>
+
+<style>
+  .formulas { list-style: none; padding: 0; margin: 0; }
+  .formulas li { display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.4rem 0; border-bottom: 1px solid var(--line); }
+  .formulas a { font-weight: 600; min-width: 5rem; }
+</style>

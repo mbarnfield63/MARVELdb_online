@@ -1,0 +1,80 @@
+---
+import Base from '../layouts/Base.astro';
+import { API, CONTACT_EMAIL, ISSUES_URL, get, moleculesWithRuns, url } from '../lib/site.js';
+
+const mols = await moleculesWithRuns();
+const runs = mols.flatMap((m) => m.runs);
+const stats = [
+  ['molecules', new Set(mols.map((m) => m.formula)).size],
+  ['isotopologues', mols.length],
+  ['runs', runs.length],
+  ['energy levels', runs.reduce((n, r) => n + (r.n_levels ?? 0), 0)],
+];
+
+// Real ids for the curl examples, so they work when pasted.
+const example = mols.find((m) => m.runs.length) ?? { slug: '12c16o', runs: [{ id: 1 }] };
+const run = example.runs[0];
+const [level] = await get(`/runs/${run.id}/levels?limit=1`).catch(() => []);
+const qnKey = level?.qn_key ?? '0 0';
+
+const methodPapers = [
+  ['T. Furtenbacher, A. G. Császár, J. Tennyson (2007). MARVEL: measured active rotational–vibrational energy levels. J. Mol. Spectrosc. 245, 115–125.', '10.1016/j.jms.2007.07.005'],
+  ['T. Furtenbacher, A. G. Császár (2012). MARVEL: measured active rotational–vibrational energy levels. II. Algorithmic improvements. J. Quant. Spectrosc. Radiat. Transf. 113, 929–935.', '10.1016/j.jqsrt.2012.01.005'],
+  ['R. Tóbiás, T. Furtenbacher, J. Tennyson, A. G. Császár (2019). Accurate empirical rovibrational energies and transitions of H₂¹⁶O. Phys. Chem. Chem. Phys. 21, 3473–3495.', '10.1039/C8CP05169K'],
+];
+---
+<Base>
+  <h1>MARVEL online</h1>
+  <p>
+    MARVEL (Measured Active Rotational–Vibrational Energy Levels) turns measured spectroscopic transitions
+    into empirical energy levels with well-defined uncertainties. db_MARVEL collects published MARVEL runs
+    across molecules, isotopologues and algorithm versions, each traced back to its paper.
+  </p>
+  <ul class="stats">
+    {stats.map(([label, n]) => <li><strong>{n.toLocaleString('en')}</strong> {label}</li>)}
+  </ul>
+
+  <h2>Navigating the site</h2>
+  <p>
+    <a href={url('/molecules/')}>Molecules</a> groups the data into diatomics, triatomics and polyatomics. Pick a molecule
+    to see its isotopologues. Each isotopologue has a run menu, newest first, with the latest run of each MARVEL version
+    marked. Under the menu are the run's paper, its level and transition counts, and links to its energy-levels,
+    transitions and segment files. The files open as plain text; right-click to save them.
+  </p>
+  <p><a href={url('/references/')}>References</a> lists the paper behind every run.</p>
+
+  <h2>Using the API</h2>
+  <p>Everything on this site comes from a public, read-only JSON API. Use it for filtered access, which the site does not offer.</p>
+  <pre><code>{`# All molecules
+curl ${API}/molecules
+
+# One isotopologue's runs, with ids, counts and file sizes
+curl ${API}/molecules/${example.slug}/runs
+
+# Energy levels of a run, filtered by quantum numbers
+curl "${API}/runs/${run.id}/levels?qn_key=${encodeURIComponent(qnKey)}"
+
+# The raw published energy-levels file
+curl -O -J ${API}/runs/${run.id}/files/output_levels`}</code></pre>
+  <p>Full reference, including pagination and the other filters: <a href={`${API}/docs`}>API documentation</a>.</p>
+
+  <h2>Submitting data</h2>
+  <p>
+    To add a MARVEL dataset, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or
+    <a href={ISSUES_URL}>open a GitHub issue</a>. Include the MARVEL input and output files and the paper reference.
+    The maintainers will load it.
+  </p>
+
+  <h2 id="cite">Cite MARVEL</h2>
+  <p>If you use MARVEL data, please cite the method papers:</p>
+  <ul class="cites">
+    {methodPapers.map(([text, doi]) => <li>{text} <a href={`https://doi.org/${doi}`}>doi:{doi}</a></li>)}
+  </ul>
+  <p>Cite the paper for each dataset as well; see <a href={url('/references/')}>References</a>.</p>
+</Base>
+
+<style>
+  .stats { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; margin: 1.25rem 0; }
+  .stats strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+  .cites li { margin-bottom: 0.4rem; }
+</style>

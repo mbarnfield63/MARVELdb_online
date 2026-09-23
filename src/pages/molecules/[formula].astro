@@ -1,0 +1,68 @@
+---
+import Base from '../../layouts/Base.astro';
+import { API, get, moleculesWithRuns, formulaSlug, runLabel, FILE_ROLES, humanSize, shortCite, url } from '../../lib/site.js';
+
+export async function getStaticPaths() {
+  const [mols, pubs] = await Promise.all([moleculesWithRuns(), get('/publications')]);
+  const cites = Object.fromEntries(pubs.map((p) => [p.bibtex_key, shortCite(p)]));
+  return [...Map.groupBy(mols, (m) => m.formula)].map(([formula, isos]) => ({
+    params: { formula: formulaSlug(formula) },
+    props: { formula, isos, cites },
+  }));
+}
+
+const { formula, isos, cites } = Astro.props;
+---
+<Base title={formula}>
+  <p class="muted"><a href={url('/molecules/')}>Molecules</a> / {formula}</p>
+  <h1>{formula}</h1>
+
+  {isos.map((m) => (
+    <section id={m.slug} class="iso">
+      <h2>{m.isotopologue}</h2>
+      {m.runs.length === 0 ? <p class="muted">No runs loaded.</p> : (
+        <div>
+          <select data-runs aria-label={`MARVEL run for ${m.isotopologue}`}>
+            {m.runs.map((r) => <option value={r.id}>{runLabel(r)}</option>)}
+          </select>
+          {m.runs.map((r, i) => (
+            <div data-run={r.id} hidden={i > 0}>
+              <p class="meta">
+                {r.publication && <a href={url(`/references/#${r.publication}`)} set:html={cites[r.publication] ?? r.publication} />}
+                {r.description && <span>{r.description}</span>}
+                {r.n_levels != null && <span>{r.n_levels.toLocaleString('en')} levels</span>}
+                {r.n_transitions != null && <span>{r.n_transitions.toLocaleString('en')} transitions</span>}
+              </p>
+              <ul class="files">
+                {FILE_ROLES.map(([role, label]) => (
+                  <li>
+                    {r.files[role] != null
+                      ? <a href={`${API}/runs/${r.id}/files/${role}`}>{label} ({humanSize(r.files[role])})</a>
+                      : <span class="muted">{label} (not available)</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  ))}
+  <p class="muted hint">Files open as plain text in the browser. Right-click a link and choose "Save link as" to download.</p>
+</Base>
+
+<script>
+  for (const sel of document.querySelectorAll('select[data-runs]')) {
+    sel.addEventListener('change', () => {
+      for (const p of sel.parentElement.querySelectorAll('[data-run]')) p.hidden = p.dataset.run !== sel.value;
+    });
+  }
+</script>
+
+<style>
+  .iso { border-top: 1px solid var(--line); padding-top: 0.25rem; }
+  select { font: inherit; padding: 0.3rem 0.5rem; max-width: 100%; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0.6rem 0; }
+  .files { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .hint { margin-top: 2.5rem; font-size: 0.875rem; }
+</style>
