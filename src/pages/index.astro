@@ -9,6 +9,7 @@ const stats = [
   ['isotopologues', mols.length],
   ['runs', runs.length],
   ['energy levels', runs.reduce((n, r) => n + (r.n_levels ?? 0), 0)],
+  ['transitions', runs.reduce((n, r) => n + (r.n_transitions ?? 0), 0)],
 ];
 
 const methodPapers = [
