@@ -1,34 +1,46 @@
 ---
 import Base from '../layouts/Base.astro';
-import { get, formulaSlug, latexToHtml, formatAuthors, url } from '../lib/site.js';
+import { get, formulaSlug, compactCite, url } from '../lib/site.js';
 
 const [pubs, mols] = await Promise.all([get('/publications'), get('/molecules')]);
 const bySlug = Object.fromEntries(mols.map((m) => [m.slug, m]));
+// The API already orders newest first, so groupBy keeps years descending.
+const byYear = [...Map.groupBy(pubs, (p) => p.year ?? 'Undated')];
 ---
 <Base title="References">
   <h1>References</h1>
   <p class="muted">The papers behind the MARVEL runs in this database, newest first. To cite the MARVEL method itself, see the <a href={url('/#cite')}>home page</a>.</p>
-  <ol class="refs">
-    {pubs.map((p) => (
-      <li id={p.bibtex_key}>
-        <span set:html={formatAuthors(p.authors)} /> ({p.year}).{' '}
-        <strong set:html={latexToHtml(p.title)} />.{' '}
-        <em set:html={latexToHtml(p.journal)} />.
-        {p.doi && <> <a href={`https://doi.org/${p.doi}`}>doi:{p.doi}</a></>}
-        <div class="isos">
-          {p.isotopologues.map((s) => bySlug[s] && (
-            <a href={url(`/molecules/${formulaSlug(bySlug[s].formula)}/#${s}`)}>{bySlug[s].isotopologue}</a>
-          ))}
-        </div>
-      </li>
-    ))}
-  </ol>
+  <div class="scroll">
+    <table>
+      {byYear.map(([year, rows]) => (
+        <tbody>
+          <tr class="year"><th colspan="4" scope="colgroup">{year}</th></tr>
+          <tr class="cols"><th scope="col">Molecule(s)</th><th scope="col">Isotopologue(s)</th><th scope="col">Citation</th><th scope="col">Link</th></tr>
+          {rows.map((p) => {
+            const isos = p.isotopologues.map((s) => bySlug[s]).filter(Boolean);
+            return (
+              <tr id={p.bibtex_key}>
+                <td>{[...new Set(isos.map((m) => m.formula))].map((f) => <span>{f}</span>)}</td>
+                <td>{isos.map((m) => <a href={url(`/molecules/${formulaSlug(m.formula)}/#${m.slug}`)}>{m.isotopologue}</a>)}</td>
+                <td set:html={compactCite(p)} />
+                <td>{p.doi ? <a href={`https://doi.org/${p.doi}`}>{p.doi}</a> : <span class="muted">—</span>}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      ))}
+    </table>
+  </div>
 </Base>
 
 <style>
-  .refs { list-style: none; padding: 0; }
-  .refs li { padding: 0.9rem 0; border-bottom: 1px solid var(--line); }
-  .refs li:target { background: var(--panel); }
-  .refs strong { font-weight: 600; }
-  .isos { display: flex; gap: 1rem; margin-top: 0.3rem; font-size: 0.875rem; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+  th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--muted); font-size: 0.8125rem; }
+  td:nth-child(-n+2) { white-space: nowrap; }
+  td:nth-child(-n+2) > * { display: block; }
+  .year th { color: var(--fg); font-size: 1rem; padding-top: 1.25rem; }
+  td:last-child { word-break: break-all; }
+  tr:target { background: var(--panel); }
 </style>

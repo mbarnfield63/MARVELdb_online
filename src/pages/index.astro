@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { API, CONTACT_EMAIL, ISSUES_URL, get, moleculesWithRuns, url } from '../lib/site.js';
+import { API, CONTACT_EMAIL, ISSUES_URL, MARVEL_URL, get, moleculesWithRuns, url } from '../lib/site.js';
 
 const mols = await moleculesWithRuns();
 const runs = mols.flatMap((m) => m.runs);
@@ -24,12 +24,17 @@ const methodPapers = [
 ];
 ---
 <Base>
-  <h1>MARVEL online</h1>
+  <h1>MARVEL Database</h1>
   <p>
     MARVEL (Measured Active Rotational–Vibrational Energy Levels) turns measured spectroscopic transitions
-    into empirical energy levels with well-defined uncertainties. db_MARVEL collects published MARVEL runs
+    into empirical energy levels with well-defined uncertainties. This database serves to collate published MARVEL runs
     across molecules, isotopologues and algorithm versions, each traced back to its paper.
   </p>
+  <p>
+    To run MARVEL online, please <a href={MARVEL_URL}>click here</a>.<br />
+    To view the current MARVEL source code, please visit the <a href="https://github.com/FurtEd/MARVEL">GitHub repository</a>.
+  </p>
+  <h2>Currently in Database</h2>
   <ul class="stats">
     {stats.map(([label, n]) => <li><strong>{n.toLocaleString('en')}</strong> {label}</li>)}
   </ul>
@@ -46,26 +51,26 @@ const methodPapers = [
   <h2>Using the API</h2>
   <p>Everything on this site comes from a public, read-only JSON API. Use it for filtered access, which the site does not offer.</p>
   <pre><code>{`# All molecules
-curl ${API}/molecules
+  curl ${API}/molecules
 
-# One isotopologue's runs, with ids, counts and file sizes
-curl ${API}/molecules/${example.slug}/runs
+  # One isotopologue's runs, with ids, counts and file sizes
+  curl ${API}/molecules/${example.slug}/runs
 
-# Energy levels of a run, filtered by quantum numbers
-curl "${API}/runs/${run.id}/levels?qn_key=${encodeURIComponent(qnKey)}"
+  # Energy levels of a run, filtered by quantum numbers
+  curl "${API}/runs/${run.id}/levels?qn_key=${encodeURIComponent(qnKey)}"
 
-# The raw published energy-levels file
-curl -O -J ${API}/runs/${run.id}/files/output_levels`}</code></pre>
+  # The raw published energy-levels file
+  curl -O -J ${API}/runs/${run.id}/files/output_levels`}</code></pre>
   <p>Full reference, including pagination and the other filters: <a href={`${API}/docs`}>API documentation</a>.</p>
 
   <h2>Submitting data</h2>
   <p>
-    To add a MARVEL dataset, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or
-    <a href={ISSUES_URL}>open a GitHub issue</a>. Include the MARVEL input and output files and the paper reference.
-    The maintainers will load it.
+    To add a MARVEL dataset, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or{" "}
+    <a href={ISSUES_URL}>open a GitHub issue</a>.<br />
+    Please include the MARVEL input and output files, along with a paper/doi reference if applicable.
   </p>
 
-  <h2 id="cite">Cite MARVEL</h2>
+  <h2 id="cite">Citing MARVEL</h2>
   <p>If you use MARVEL data, please cite the method papers:</p>
   <ul class="cites">
     {methodPapers.map(([text, doi]) => <li>{text} <a href={`https://doi.org/${doi}`}>doi:{doi}</a></li>)}
@@ -74,7 +79,7 @@ curl -O -J ${API}/runs/${run.id}/files/output_levels`}</code></pre>
 </Base>
 
 <style>
-  .stats { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; margin: 1.25rem 0; }
+  .stats { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; margin: 0.5rem 0 1.25rem; }
   .stats strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
   .cites li { margin-bottom: 0.4rem; }
 </style>

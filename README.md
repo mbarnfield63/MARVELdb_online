@@ -1,4 +1,4 @@
-# MARVEL online
+# MARVEL Database
 
 Static website over [db_MARVEL](https://github.com/mbarnfield63/MARVEL_db):
 a home page, a molecule browser, and a references list. Built with Astro.

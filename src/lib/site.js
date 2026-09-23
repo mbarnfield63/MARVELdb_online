@@ -6,6 +6,7 @@ export const url = (path) => (import.meta.env?.BASE_URL ?? '/').replace(/\/$/, '
 
 export const ISSUES_URL = 'https://github.com/mbarnfield63/MARVEL_db/issues';
 export const CONTACT_EMAIL = 'marco.barnfield.24@ucl.ac.uk';
+export const MARVEL_URL = 'https://furted.github.io/MARVEL/';
 
 export async function get(path) {
   const res = await fetch(API + path);
@@ -83,6 +84,12 @@ export function formatAuthors(authors = '') {
     const initials = first.split(/[\s.]+/).filter(Boolean).map((n) => n.split('-').map((p) => p[0] + '.').join('-'));
     return [...initials, last].join(' ');
   }).join(', ');
+}
+
+// "S. Mahmoud, et al., Astrophys. J. Suppl., 2025" (references table)
+export function compactCite(pub) {
+  const names = formatAuthors(pub.authors).split(', ');
+  return [names[0] + (names.length > 1 ? ', et al.' : ''), latexToHtml(pub.journal), pub.year].join(', ');
 }
 
 // "Syme & McKemmish (2020)" / "Mahmoud et al. (2025)"

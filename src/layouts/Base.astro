@@ -9,12 +9,12 @@ const nav = [['/', 'Home'], ['/molecules/', 'Molecules'], ['/references/', 'Refe
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{title ? `${title} · MARVEL online` : 'MARVEL online'}</title>
+  <title>{title ? `${title} · MARVEL Database` : 'MARVEL Database'}</title>
 </head>
 <body>
   <header>
     <nav>
-      <span class="brand">MARVEL online</span>
+      <span class="brand">MARVEL Database</span>
       {nav.map(([href, label]) => (
         <a href={href} aria-current={(href === url('/') ? path === href : path.startsWith(href)) ? 'page' : undefined}>{label}</a>
       ))}
