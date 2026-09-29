@@ -2,7 +2,7 @@
 // plots); both are memoised, so a build fetches each API resource once no
 // matter how many pages use it.
 import { get, sortRuns, groupOf, GROUPS, formulaSlug, shortCite, compactCite } from './site.js';
-import { coverageBins, levelJE, groupPoints, COVERAGE } from './figures.js';
+import { coverageBins, levelJE, groupPoints, levelBins, niceTicks, stateLabel } from './figures.js';
 
 const once = (fn) => { let p; return () => (p ??= fn()); };
 const sum = (xs, f) => xs.reduce((n, x) => n + (f(x) ?? 0), 0);
@@ -92,6 +92,7 @@ export function runFigure(runId) {
     const coverage = coverageBins(transitions, units);
     return {
       jE: run.qn_names.includes('J') ? levelJE(levels) : [],
+      energies: levels.map((l) => l.energy),
       coverage,
       nRemoved: coverage.removed.reduce((a, b) => a + b, 0),
       sources: new Set(transitions.map((t) => t.source_tag)).size,
@@ -100,27 +101,34 @@ export function runFigure(runId) {
   return figures.get(runId);
 }
 
-// One coverage row per molecule: the isotopologue whose latest run with
-// transitions comes from the newest paper (publication year, then load day);
-// ties, e.g. several isotopologues from one paper, go to the most transitions.
-export async function coverageByMolecule() {
+// Energy-level coverage of the n molecules with the newest papers, one row
+// each: the isotopologue whose latest run with levels comes from the newest
+// paper (publication year, then load day); ties, e.g. several isotopologues
+// from one paper, go to the most levels. All rows share one linear axis.
+export async function levelCoverage(n = 10) {
   const { formulas, pubByKey } = await loadSite();
-  const rows = await Promise.all(formulas.map(async (f) => {
-    const cands = f.isos.map((m) => ({ mol: m, run: m.runs.find((r) => r.n_transitions) })).filter((c) => c.run);
-    if (!cands.length) return null;
-    const when = ({ run }) => [pubByKey[run.publication]?.year ?? 0, run.loaded_at.slice(0, 10)];
-    cands.sort((a, b) => when(b)[0] - when(a)[0] || when(b)[1].localeCompare(when(a)[1]) || b.run.n_transitions - a.run.n_transitions);
-    const { mol, run } = cands[0];
-    return { formula: f, mol, run, coverage: (await runFigure(run.id)).coverage };
-  }));
-  return { rows: rows.filter(Boolean), ...COVERAGE };
+  const when = ({ run }) => [pubByKey[run.publication]?.year ?? 0, run.loaded_at.slice(0, 10), run.n_levels];
+  const newer = (a, b) => when(b)[0] - when(a)[0] || when(b)[1].localeCompare(when(a)[1]) || when(b)[2] - when(a)[2];
+  const picks = formulas
+    .map((f) => f.isos.map((m) => ({ formula: f, mol: m, run: m.runs.find((r) => r.n_levels) })).filter((c) => c.run).sort(newer)[0])
+    .filter(Boolean).sort(newer).slice(0, n);
+  const rows = await Promise.all(picks.map(async (p) => ({ ...p, energies: (await runFigure(p.run.id)).energies })));
+  const hi = niceTicks(Math.max(...rows.flatMap((r) => r.energies))).at(-1);
+  const scale = { lo: 0, hi, bins: 70, log: false };
+  return { scale, rows: rows.map(({ energies, ...r }) => ({ ...r, coverage: levelBins(energies, scale) })) };
 }
 
 // A molecule's level map with one series per isotopologue (latest run each),
 // ordered as the page lists them. Null when no run has a J quantum number.
+// When the levels carry electronic states, the series are those states
+// instead (all isotopologues pooled), lowest state first.
 export async function formulaLevelMap(formula, opts = {}) {
-  const groups = await Promise.all(formula.isos.filter((m) => m.runs.length).map(async (m) => ({
+  const isos = await Promise.all(formula.isos.filter((m) => m.runs.length).map(async (m) => ({
     label: m.isotopologue, jE: (await runFigure(m.runs[0].id)).jE,
   })));
-  return groupPoints(groups, { w: 360, h: 220, catKey: 'isotopologue', ...opts });
+  const byState = isos.some((g) => g.jE.some((p) => p[2]));
+  const groups = !byState ? isos : [...Map.groupBy(isos.flatMap((g) => g.jE), (p) => p[2])]
+    .map(([s, jE]) => ({ label: stateLabel(s), jE, eMin: Math.min(...jE.map((p) => p[1])) }))
+    .sort((a, b) => a.eMin - b.eMin);
+  return groupPoints(groups, { catKey: byState ? 'electronic state' : 'isotopologue', w: 280, h: 180, ...opts });
 }

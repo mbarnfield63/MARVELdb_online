@@ -1,36 +1,40 @@
 ---
-// Spectral coverage of a run's input transitions on a log wavenumber axis
-// (0.01 to 100,000 cm-1). mode="strip": one heat row (opacity = sqrt share),
-// for stacking runs; mode="axis": the shared scale to put under them.
-import { COVERAGE, REGIONS } from '../../lib/figures.js';
+// Histogram strip on a wavenumber axis: by default the spectral coverage of a
+// run's input transitions on a log axis (0.01 to 100,000 cm-1); pass a linear
+// scale ({lo, hi, bins, log: false}) for energy levels. mode="strip": one heat
+// row (opacity = sqrt share), for stacking runs; mode="axis": the shared scale
+// to put under them.
+import { COVERAGE, REGIONS, niceTicks } from '../../lib/figures.js';
 
-const { coverage, mode = 'strip', label = 'Spectral coverage', regions = true } = Astro.props;
-const { lo, hi, bins } = COVERAGE;
+const { coverage, mode = 'strip', label = 'Spectral coverage', regions = true, scale = COVERAGE, noun = 'lines' } = Astro.props;
+const { lo, hi, bins, log = true } = scale;
 const W = 700;
 const H = 14;
 const bw = W / bins;
 const step = (hi - lo) / bins;
-const fmtNu = (e) => (e >= 3 ? `${(10 ** e / 1000).toLocaleString('en', { maximumFractionDigits: 1 })}k` : (10 ** e).toLocaleString('en', { maximumSignificantDigits: 2 }));
+const fmtNu = log
+  ? (e) => (e >= 3 ? `${(10 ** e / 1000).toLocaleString('en', { maximumFractionDigits: 1 })}k` : (10 ** e).toLocaleString('en', { maximumSignificantDigits: 2 }))
+  : (v) => (v >= 1000 ? `${(v / 1000).toLocaleString('en', { maximumFractionDigits: 1 })}k` : Math.round(v).toLocaleString('en'));
 const binLabel = (i) => `${fmtNu(lo + i * step)}–${fmtNu(lo + (i + 1) * step)} cm⁻¹`;
-const decades = Array.from({ length: hi - lo + 1 }, (_, k) => lo + k);
+const decades = log ? Array.from({ length: hi - lo + 1 }, (_, k) => lo + k) : niceTicks(hi - lo, 7).map((v) => lo + v);
 const pct = (e) => `${(((e - lo) / (hi - lo)) * 100).toFixed(2)}%`;
 const kept = coverage?.kept ?? [];
-const removed = coverage?.removed ?? [];
+const removed = coverage?.removed ?? kept.map(() => 0);
 const max = Math.max(1, ...kept.map((k, i) => k + removed[i]));
 const total = kept.reduce((a, b) => a + b, 0);
-const summary = `${label}: ${total.toLocaleString('en')} lines; densest near ${binLabel(kept.indexOf(Math.max(...kept, 0)))}.`;
+const summary = `${label}: ${total.toLocaleString('en')} ${noun}; densest near ${binLabel(kept.indexOf(Math.max(...kept, 0)))}.`;
 ---
 {mode === 'axis' ? (
   <div class="cov axis" aria-hidden="true">
     <div class="scale">{decades.map((e) => <span style={`left:${pct(e)}`} class={e === lo ? 'first' : e === hi ? 'last' : ''}>{fmtNu(e)}</span>)}</div>
-    {regions && <div class="regions">{REGIONS.map(([name, a, b]) => <span style={`left:${pct(a)};width:calc(${pct(b)} - ${pct(a)})`}>{name}</span>)}</div>}
+    {log && regions && <div class="regions">{REGIONS.map(([name, a, b]) => <span style={`left:${pct(a)};width:calc(${pct(b)} - ${pct(a)})`}>{name}</span>)}</div>}
   </div>
 ) : (
   <svg class="cov strip" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} preserveAspectRatio="none">
     <rect width={W} height={H} class="track" />
     {kept.map((k, i) => (k + removed[i]) > 0 && (
       <rect x={i * bw} width={bw - 1} height={H} class="heat" fill-opacity={(0.15 + 0.85 * Math.sqrt((k + removed[i]) / max)).toFixed(2)}>
-        <title>{binLabel(i)}: {k.toLocaleString('en')} lines{removed[i] ? `, ${removed[i]} removed` : ''}</title>
+        <title>{binLabel(i)}: {k.toLocaleString('en')} {noun}{removed[i] ? `, ${removed[i]} removed` : ''}</title>
       </rect>
     ))}
   </svg>

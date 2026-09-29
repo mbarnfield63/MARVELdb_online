@@ -5,12 +5,12 @@ import Intro from '../components/content/Intro.astro';
 import SiteGuide from '../components/content/SiteGuide.astro';
 import ReportErrors from '../components/content/ReportErrors.astro';
 import CiteMarvel from '../components/content/CiteMarvel.astro';
-import { loadSite, coverageByMolecule } from '../lib/data.js';
+import { loadSite, levelCoverage } from '../lib/data.js';
 import { url } from '../lib/site.js';
 
 const { stats: allStats, lastLoaded } = await loadSite();
 const stats = allStats.filter((s) => s.key !== 'runs');
-const overview = await coverageByMolecule();
+const overview = await levelCoverage(10);
 ---
 <Layout wide>
   <section class="band hero" aria-labelledby="hero-title">
@@ -22,24 +22,24 @@ const overview = await coverageByMolecule();
       </ul>
 
       <figure class="spectrogram">
-        <figcaption>
-          <span>Spectral coverage of the input transitions: per molecule, its most recently published isotopologue</span>
-          <span class="num">cm⁻¹, log scale</span>
-        </figcaption>
         <div class="rows">
           {overview.rows.map(({ formula, mol, run }) => (
             <a class="row" href={url(`/molecules/${formula.slug}/#${mol.slug}`)}>
               <span class="label"><strong>{formula.formula}</strong> <span class="num iso">{mol.isotopologue}</span></span>
-              <span class="count num">{run.n_transitions.toLocaleString('en')}</span>
+              <span class="count num">{run.n_levels.toLocaleString('en')}</span>
             </a>
           ))}
         </div>
         <div class="strips">
           {overview.rows.map(({ mol, coverage }) => (
-            <Coverage coverage={coverage} mode="strip" label={`${mol.isotopologue} spectral coverage`} />
+            <Coverage coverage={coverage} mode="strip" scale={overview.scale} noun="levels" label={`${mol.isotopologue} energy levels`} />
           ))}
-          <Coverage mode="axis" />
+          <Coverage mode="axis" scale={overview.scale} />
         </div>
+        <figcaption>
+          <span>Coverage of energy levels (10 most recent molecules, one isotopologue each)</span>
+          <span class="num">energy, cm⁻¹</span>
+        </figcaption>
       </figure>
       <p class="updated num">Last updated {lastLoaded}</p>
     </div>
@@ -77,7 +77,7 @@ const overview = await coverageByMolecule();
   .stats span { color: var(--muted); font-size: 0.875rem; }
 
   .spectrogram { margin: 0; display: grid; grid-template-columns: minmax(9rem, max-content) 1fr; column-gap: 1rem; row-gap: 0; }
-  .spectrogram figcaption { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 0.8125rem; color: var(--muted); margin-bottom: 0.75rem; }
+  .spectrogram figcaption { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 0.8125rem; color: var(--muted); margin-top: 0.75rem; }
   .rows, .strips { display: flex; flex-direction: column; gap: 6px; --strip-h: 22px; }
   .row { height: 22px; display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; font-size: 0.75rem; color: var(--fg); text-decoration: none; }
   .row:hover .label { text-decoration: underline; }

@@ -41,6 +41,7 @@ export function coverageBins(transitions, unitOf = {}) {
 // Groups of [J, E] pairs -> deduplicated points on a w x h grid, one series
 // per group, in the order given. Past maxCats groups the rest fold into
 // "Other", the biggest kept first so the fewest points go grey.
+// Axes run 0 to the first "nice" tick at or past the data maximum.
 export function groupPoints(groups, { w = 480, h = 300, maxCats = 5, catKey = null } = {}) {
   groups = groups.map((g) => ({ ...g, jE: g.jE.filter(([j]) => Number.isFinite(j)) })).filter((g) => g.jE.length);
   if (!groups.length) return null;
@@ -51,6 +52,10 @@ export function groupPoints(groups, { w = 480, h = 300, maxCats = 5, catKey = nu
   const all = groups.flatMap((g) => g.jE);
   const jMax = Math.max(...all.map(([j]) => j), 1);
   const eMax = Math.max(...all.map(([, e]) => e), 1);
+  const xTicks = niceTicks(jMax);
+  const yTicks = niceTicks(eMax);
+  const jTop = xTicks.at(-1);
+  const eTop = yTicks.at(-1);
   const seen = new Set();
   const points = [];
   const counts = new Array(cats.length).fill(0);
@@ -58,8 +63,8 @@ export function groupPoints(groups, { w = 480, h = 300, maxCats = 5, catKey = nu
     const c = keep.has(g) ? named.indexOf(g) : cats.length - 1;
     for (const [j, e] of g.jE) {
       counts[c]++;
-      const x = Math.round((j / jMax) * w);
-      const y = Math.round((e / eMax) * h);
+      const x = Math.round((j / jTop) * w);
+      const y = Math.round((e / eTop) * h);
       const key = `${x},${y},${c}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -67,11 +72,47 @@ export function groupPoints(groups, { w = 480, h = 300, maxCats = 5, catKey = nu
     }
   }
   return {
-    w, h, jMax, eMax, catKey,
+    w, h, jMax, eMax, jTop, eTop, xTicks, yTicks, catKey,
     cats: cats.map((label, i) => ({ label, n: counts[i], other: fold && i === cats.length - 1 })),
     points,
   };
 }
 
-// A run's levels as [J, E] pairs (J parsed; NaN when missing).
-export const levelJE = (levels) => levels.map((l) => [parseFloat(l.quantum_numbers.J), l.energy]);
+// A run's levels as [J, E, electronic state] (J parsed, NaN when missing;
+// state null when the run has no state quantum number).
+export const levelJE = (levels) => levels.map((l) => [parseFloat(l.quantum_numbers.J), l.energy, stateOf(l.quantum_numbers)]);
+
+// Electronic state from a level's quantum numbers: "state", or the part of a
+// "vibronic" label before its parity/Omega suffix ("A2Pi_f3/2" -> "A2Pi").
+export const stateOf = (qn) => qn.state ?? qn.vibronic?.split('_')[0] ?? null;
+
+// "X2Sig+" -> "X²Σ⁺"; anything unrecognised comes back unchanged.
+const SUP = { 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹', '+': '⁺', '-': '⁻' };
+const TERM = { Sig: 'Σ', Sigma: 'Σ', Pi: 'Π', Delta: 'Δ', Del: 'Δ', Phi: 'Φ', Gamma: 'Γ' };
+export function stateLabel(s) {
+  const m = /^([A-Za-z]'*)(\d+)(Sigma|Sig|Pi|Delta|Del|Phi|Gamma)([+-]?)(.*)$/.exec(s ?? '');
+  if (!m) return s ?? 'unassigned';
+  const [, letter, mult, term, sign, rest] = m;
+  return letter + [...mult].map((d) => SUP[d]).join('') + TERM[term] + (sign ? SUP[sign] : '') + rest;
+}
+
+// About n evenly spaced round ticks (1, 2 or 5 x 10^k apart) from 0 to at
+// least max.
+export function niceTicks(max, n = 4) {
+  const raw = Math.max(max, 1) / n;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const f = raw / mag;
+  const step = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag;
+  const k = Math.ceil(Math.max(max, 1) / step - 1e-9);
+  return Array.from({ length: k + 1 }, (_, i) => +(i * step).toPrecision(12));
+}
+
+// Energy-level histogram on a linear axis, lo to hi cm-1.
+export function levelBins(energies, { lo = 0, hi, bins }) {
+  const kept = new Array(bins).fill(0);
+  for (const e of energies) {
+    const i = Math.min(bins - 1, Math.floor(((e - lo) / (hi - lo)) * bins));
+    if (i >= 0) kept[i]++;
+  }
+  return { kept };
+}

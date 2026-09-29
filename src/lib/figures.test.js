@@ -1,7 +1,7 @@
 // Run: npm test
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { toWavenumber, coverageBins, groupPoints, COVERAGE } from './figures.js';
+import { toWavenumber, coverageBins, groupPoints, COVERAGE, niceTicks, stateOf, stateLabel, levelBins } from './figures.js';
 
 test('units convert to cm-1, sign dropped', () => {
   assert.equal(toWavenumber(-2.5), 2.5);
@@ -30,4 +30,24 @@ test('group points: one series per group, smallest folded into Other, dedup on t
   assert.equal(groupPoints([{ label: 'x', jE: [[NaN, 1]] }]), null);
   const dup = groupPoints([{ label: 'x', jE: [[1, 1], [1, 1.0000001]] }], { w: 10, h: 10 });
   assert.equal(dup.points.length, 1);
+});
+
+test('nice ticks reach past the max on round steps', () => {
+  assert.deepEqual(niceTicks(52709), [0, 10000, 20000, 30000, 40000, 50000, 60000]);
+  assert.deepEqual(niceTicks(87), [0, 20, 40, 60, 80, 100]);
+  assert.equal(niceTicks(0).at(-1), 1);
+});
+
+test('electronic states: state or vibronic prefix, printed as term symbols', () => {
+  assert.equal(stateOf({ vibronic: 'A2Pi_f3/2', J: '1.5' }), 'A2Pi');
+  assert.equal(stateOf({ state: 'b1Sig+' }), 'b1Sig+');
+  assert.equal(stateOf({ v: '0', J: '1' }), null);
+  assert.equal(stateLabel('X2Sig+'), 'X²Σ⁺');
+  assert.equal(stateLabel('B3Sig-'), 'B³Σ⁻');
+  assert.equal(stateLabel('a1Delta'), 'a¹Δ');
+  assert.equal(stateLabel('weird'), 'weird');
+});
+
+test('level bins: linear, top edge lands in the last bin', () => {
+  assert.deepEqual(levelBins([0, 5, 9.99, 10], { hi: 10, bins: 2 }).kept, [1, 3]);
 });

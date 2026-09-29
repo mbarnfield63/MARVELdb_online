@@ -1,23 +1,39 @@
 ---
 // Small term-value plot: levels at (J, energy), one colour per series
-// (figures.js groupPoints), with a legend when there is more than one.
+// (figures.js groupPoints), on labelled J and energy axes, with a legend when
+// there is more than one series.
 const { fig, label = 'Energy levels' } = Astro.props;
-const pad = 6;
-const W = fig.w + 2 * pad;
-const H = fig.h + 2 * pad;
+// Margins hold the tick labels and axis titles (SVG units).
+const m = { l: 46, r: 10, t: 8, b: 38 };
+const W = fig.w + m.l + m.r;
+const H = fig.h + m.t + m.b;
+const X = (j) => m.l + (j / fig.jTop) * fig.w;
+const Y = (e) => m.t + fig.h - (e / fig.eTop) * fig.h;
 const series = fig.cats.map((c, i) => ({
   ...c,
   color: c.other ? 'var(--s-other)' : `var(--s${i + 1})`,
   // Zero-length round-capped segments draw as dots: a few bytes per point.
-  d: fig.points.filter((p) => p[2] === i).map(([x, y]) => `M${x + pad} ${pad + fig.h - y}h0`).join(''),
+  d: fig.points.filter((p) => p[2] === i).map(([x, y]) => `M${x + m.l} ${m.t + fig.h - y}h0`).join(''),
 }));
 const fmt = (v) => v.toLocaleString('en');
+// Energies of 10,000 cm-1 and up are labelled in thousands, the standard
+// "E / 10³ cm⁻¹" axis, so the tick labels stay short.
+const kilo = fig.eTop >= 10000;
+const eTick = (e) => fmt(kilo ? e / 1000 : e);
 const summary = `${label}: ${fmt(fig.cats.reduce((n, c) => n + c.n, 0))} levels up to J = ${fmt(fig.jMax)} and ${fmt(Math.round(fig.eMax))} cm⁻¹`
   + (fig.catKey ? `, by ${fig.catKey}: ${fig.cats.map((c) => c.label).join(', ')}.` : '.');
 ---
 <figure class="levelmap">
   <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary}>
-    {series.map((s) => <path d={s.d} stroke={s.color} />)}
+    <g class="axes" aria-hidden="true">
+      {fig.yTicks.map((e) => <line class="grid" x1={m.l} x2={m.l + fig.w} y1={Y(e)} y2={Y(e)} />)}
+      <path class="frame" d={`M${m.l} ${m.t}V${m.t + fig.h}H${m.l + fig.w}`} />
+      {fig.yTicks.map((e) => <text x={m.l - 5} y={Y(e)} text-anchor="end" dominant-baseline="middle">{eTick(e)}</text>)}
+      {fig.xTicks.map((j) => <text x={X(j)} y={m.t + fig.h + 14} text-anchor="middle">{fmt(j)}</text>)}
+      <text class="title" x={m.l + fig.w / 2} y={H - 4} text-anchor="middle">J</text>
+      <text class="title" transform={`translate(12 ${m.t + fig.h / 2}) rotate(-90)`} text-anchor="middle">{kilo ? 'E / 10³ cm⁻¹' : 'E / cm⁻¹'}</text>
+    </g>
+    {series.map((s) => <path class="pts" d={s.d} stroke={s.color} />)}
   </svg>
   {fig.cats.length > 1 && (
     <figcaption class="legend">
@@ -29,8 +45,12 @@ const summary = `${label}: ${fmt(fig.cats.reduce((n, c) => n + c.n, 0))} levels 
 
 <style>
   .levelmap { margin: 0; }
-  svg { display: block; width: 100%; height: auto; }
-  path { stroke-width: 2.6; stroke-linecap: round; fill: none; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .pts { stroke-width: 2.6; stroke-linecap: round; fill: none; }
+  .grid { stroke: var(--line); stroke-width: 1; }
+  .frame { stroke: var(--muted); stroke-width: 1; fill: none; }
+  text { font: 12px "IBM Plex Mono", monospace; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  text.title { font: italic 13px "IBM Plex Sans", sans-serif; fill: var(--fg); }
   .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.8125rem; color: var(--fg); margin-top: 0.4rem; align-items: center; }
   .legend i { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.35rem; vertical-align: -0.05rem; }
   .legend-key { color: var(--muted); }
